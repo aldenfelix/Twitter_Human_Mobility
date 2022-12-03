@@ -6,12 +6,9 @@ library(moveVis)
 use_disk()
 use_multicore()
 
-# period 1: 03/01/2018 - 10/31/2018; 
-# period 2: 09/01/2019 - 05/31/2020; 
-# period 3: 10/01/2021 - 06/31/2022
-
 # Merge all Tweets, Wrangle, Save as tweets.rds ---- 
 
+# test with ~20 users
 tweets <- list.files(path='C:/Users/Alden/Documents/College/Year 4/Semester 1//EPPS 6302 (METHODS OF DATA COLLECTION AND PRODUCTION)/Project/Epps6302_Project/data/tweets') %>%
    lapply(read_csv) %>%
    bind_rows
@@ -34,6 +31,7 @@ tweets$Datetime <- as.POSIXct(tweets$Datetime)
 saveRDS(tweets, "data/tweets.rds")
 
 
+# ~300 users
 fulltweets <- read_csv("data/combined_full.csv")
 
 fulltweets <- subset(fulltweets, !is.na(Coordinates))
@@ -56,6 +54,9 @@ saveRDS(fulltweets, "data/fulltweets.rds")
 
 
 # Split Data Into 3 Periods ----
+# period 1: 03/01/2018 - 10/31/2018; 
+# period 2: 09/01/2019 - 05/31/2020; 
+# period 3: 10/01/2021 - 06/31/2022
 
 fulltweets <- readRDS("data/fulltweets.rds")
 
@@ -83,7 +84,7 @@ fulltweets %>% filter(grepl('2022', Datetime)) %>% nrow()
 
 
 
-# (TEST) Creating MoveStack Object and Animating ----
+# (TEST) Creating MoveStack Object and Animating ~20 users ----
 
 tweets <- readRDS("data/tweets.rds")
 
@@ -122,74 +123,109 @@ animate_frames(frames, out_file = "move.mp4",
 
 # Animating  Period 1 ----
 
+# Subset Period and Coerce to Classes Required for MoveStack Object
+# Date/Time needs to be class POSIXct
 move1 <- subset(period1, select = c(Datetime, longitude, latitude, Username))
 move1$longitude <- as.numeric(move1$longitude)
 move1$latitude <- as.numeric(move1$latitude)
 
-# Remove Observations of Usernames with < 10 Observations
+# Remove Observations of Usernames with < 2 Unique Coordinates
+userplaces <- read_csv("data/combined_full.csv")
+userplaces <- subset(userplaces, Username != "everytract")
+userplaces <- userplaces %>% 
+  group_by(Username) %>% 
+  summarise(uniqueplaces = n_distinct(Coordinates)) %>% 
+  subset(uniqueplaces < 2)
+for (i in seq_along(userplaces)) {
+  move1 <- subset(move1, Username != userplaces$Username[[i]])
+}
+
+# Remove Observations of Usernames with < x Observations
+# (otherwise causes problems when creating MoveStack)
 names <- vector("list")
 c <- 1
 for (i in seq_along(unique(move1$Username))) {
-  if (move1 %>% 
-      subset(Username == unique(move1$Username)[[i]]) %>% 
-      nrow < 100) {
+  if (move1 %>%
+      subset(Username == unique(move1$Username)[[i]]) %>%
+      nrow < 10) {
     names[[c]] <- unique(move1$Username)[[i]]
     c <- c + 1
   }
 }
-  
+
 for (i in seq_along(names)) {
   move1 <- subset(move1, Username != names[[i]])
 }
 
+# Coerce Usernames After Dropping Users
 move1$Username <- factor(move1$Username)
 
+# Problem Users
 move1 <- subset(move1, Username!= "Nohelia_acr" & 
                       Username!= "baboquarto2" &
                       Username!= "everytract")
 
+# MoveStack Requires Unique Time Stamps
 move1 <- distinct(move1, Datetime, .keep_all = TRUE)
 
+# Restrict Data to Custom Bounding Box (U.S.)
 move1 <- subset(move1, longitude > -125 &
                   longitude < -66 &
                   latitude > 24 &
                   latitude < 50)
 
+# Restrict Data to DFW Area
+move1 <- subset(move1, longitude > -97.5411 &
+                  longitude < -96.3066 &
+                  latitude > 32.3779 &
+                  latitude < 33.3308)
+
+# Convert Dataframe to MoveStack
 df1 <- df2move(move1, x = "longitude", y = "latitude", 
                             time = "Datetime", track_id = "Username",
                             proj = "+init=epsg:4326 +proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0")
 
-m1 <- align_move(df1, res = "mean", unit = "days")
+# Temporal Allignment for Animation
+m1 <- align_move(df1, res = "mean")
 
-view_spatial(m1)
+# Interactive Map with all Data
+# view_spatial(m1)
 
+# Coerce to WGS 84 / Pseudo Mercator (epsg:3857) / Web Mercator
+# (remove distortion from adjusting for data's projection)
+ m1 <- sp::spTransform(m1, "+init=epsg:3857")
+
+# Create frames
 frames1 <- frames_spatial(m1, map_service = "osm", 
                          map_type = "streets",
                          alhpa = 0.5,
                          path_legend = FALSE,
                          path_size = 0.5,
                          tail_size = 0.5,
-                         trace_size = 0.5) %>% 
+                         trace_size = 0.5,
+                         equidistant = FALSE) %>% 
   add_labels(x = "Longitude", y = "Latitude") %>% 
   add_northarrow() %>% 
   add_scalebar() %>% 
   add_timestamps(type = "label") %>% 
   add_progress()
 
+# Check Frames before Animating
+# head(frames1, n = 5L)
 # tail(frames1, n = 5L)
 
 animate_frames(frames1, out_file = "move1.mp4", 
-               width = 2560, height = 1440, res = 200)
+               width = 700, height = 700, res = 200)
 
 
 
 # Animating  Period 2 ----
+# (check Animating Period 1 for Comments)
 
 move2 <- subset(period2, select = c(Datetime, longitude, latitude, Username))
 move2$longitude <- as.numeric(move2$longitude)
 move2$latitude <- as.numeric(move2$latitude)
 
-# Remove Observations of Usernames with < 10 Observations
 names2 <- vector("list")
 c <- 1
 for (i in seq_along(unique(move2$Username))) {
@@ -224,7 +260,7 @@ df2 <- df2move(move2, x = "longitude", y = "latitude",
 
 m2 <- align_move(df2, res = "mean", unit = "days")
 
-view_spatial(m2)
+# view_spatial(m2)
 
 frames2 <- frames_spatial(m2, map_service = "osm", 
                           map_type = "streets",
@@ -247,12 +283,12 @@ animate_frames(frames2, out_file = "move2.mp4",
 
 
 # Animating  Period 3 ----
+# (check Animating Period 1 for Comments)
 
 move3 <- subset(period3, select = c(Datetime, longitude, latitude, Username))
 move3$longitude <- as.numeric(move3$longitude)
 move3$latitude <- as.numeric(move3$latitude)
 
-# Remove Observations of Usernames with < 10 Observations
 names3 <- vector("list")
 c <- 1
 for (i in seq_along(unique(move3$Username))) {
@@ -287,7 +323,7 @@ df3 <- df2move(move3, x = "longitude", y = "latitude",
 
 m3 <- align_move(df3, res = "mean")
 
-view_spatial(m3)
+# view_spatial(m3)
 
 frames3 <- frames_spatial(m3, map_service = "osm", 
                           map_type = "streets",
