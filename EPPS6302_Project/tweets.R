@@ -308,3 +308,11 @@ animate_frames(frames3, out_file = "move3.mp4",
                width = 2560, height = 1440, res = 200)
 
 
+
+# Users Arranged by Number of Unique Coordinates----
+usercoords <- read_csv("data/combined_full.csv")
+usercoords <- subset(usercoords, Username != "everytract")
+userplaces <- usercoords %>% 
+  group_by(Username) %>% 
+  summarise(uniqueplaces = n_distinct(Coordinates)) %>% 
+  arrange(desc(uniqueplaces))
