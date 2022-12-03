@@ -316,3 +316,4 @@ userplaces <- usercoords %>%
   group_by(Username) %>% 
   summarise(uniqueplaces = n_distinct(Coordinates)) %>% 
   arrange(desc(uniqueplaces))
+write_csv(userplaces, "data/toptravelers.csv")
