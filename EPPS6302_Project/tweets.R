@@ -3,6 +3,7 @@ library(dplyr)
 library(readr)
 library(tidyr)
 library(moveVis)
+library(sf)
 use_disk()
 use_multicore()
 
@@ -168,22 +169,27 @@ move1 <- subset(move1, Username!= "Nohelia_acr" &
 # MoveStack Requires Unique Time Stamps
 move1 <- distinct(move1, Datetime, .keep_all = TRUE)
 
-# Restrict Data to Custom Bounding Box (U.S.)
+# Restrict Data to Bounding Box of U.S.
 move1 <- subset(move1, longitude > -125 &
                   longitude < -66 &
                   latitude > 24 &
                   latitude < 50)
 
-# Restrict Data to DFW Area
+# Restrict Data to Bounding Box of DFW Area
 move1 <- subset(move1, longitude > -97.5411 &
                   longitude < -96.3066 &
                   latitude > 32.3779 &
                   latitude < 33.3308)
 
+# Create CRS object to pass onto dfwmove()
+# 4326 - EPSG 4326
+# 3857 - Pseudo Mercator
+projection <- st_crs(4326)
+
 # Convert Dataframe to MoveStack
 df1 <- df2move(move1, x = "longitude", y = "latitude", 
                             time = "Datetime", track_id = "Username",
-                            proj = "+init=epsg:4326 +proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0")
+                            proj = projection$input)
 
 # Temporal Allignment for Animation
 m1 <- align_move(df1, res = "mean")
@@ -192,18 +198,18 @@ m1 <- align_move(df1, res = "mean")
 # view_spatial(m1)
 
 # Coerce to WGS 84 / Pseudo Mercator (epsg:3857) / Web Mercator
-# (remove distortion from adjusting for data's projection)
- m1 <- sp::spTransform(m1, "+init=epsg:3857")
+# (no noticeable improvement) (remove distortion from adjusting for data's projection)
+# m1 <- sp::spTransform(m1, projection$input)
 
 # Create frames
-frames1 <- frames_spatial(m1, map_service = "osm", 
-                         map_type = "streets",
+frames1 <- frames_spatial(m1, map_service = "carto", 
+                         map_type = "dark",
                          alhpa = 0.5,
                          path_legend = FALSE,
                          path_size = 0.5,
                          tail_size = 0.5,
                          trace_size = 0.5,
-                         equidistant = FALSE) %>% 
+                         equidistant = TRUE) %>% 
   add_labels(x = "Longitude", y = "Latitude") %>% 
   add_northarrow() %>% 
   add_scalebar() %>% 
@@ -211,11 +217,11 @@ frames1 <- frames_spatial(m1, map_service = "osm",
   add_progress()
 
 # Check Frames before Animating
-# head(frames1, n = 5L)
-# tail(frames1, n = 5L)
+# head(frames1, n = 1L)
+# tail(frames1, n = 1L)
 
-animate_frames(frames1, out_file = "move1.mp4", 
-               width = 700, height = 700, res = 200)
+animate_frames(frames1, out_file = "move1_1.mp4", 
+               width = 2560, height = 1440, res = 200)
 
 
 
@@ -226,12 +232,22 @@ move2 <- subset(period2, select = c(Datetime, longitude, latitude, Username))
 move2$longitude <- as.numeric(move2$longitude)
 move2$latitude <- as.numeric(move2$latitude)
 
+userplaces <- read_csv("data/combined_full.csv")
+userplaces <- subset(userplaces, Username != "everytract")
+userplaces <- userplaces %>% 
+  group_by(Username) %>% 
+  summarise(uniqueplaces = n_distinct(Coordinates)) %>% 
+  subset(uniqueplaces < 2)
+for (i in seq_along(userplaces)) {
+  move2 <- subset(move2, Username != userplaces$Username[[i]])
+}
+
 names2 <- vector("list")
 c <- 1
 for (i in seq_along(unique(move2$Username))) {
   if (move2 %>% 
       subset(Username == unique(move2$Username)[[i]]) %>% 
-      nrow < 100) {
+      nrow < 10) {
     names2[[c]] <- unique(move2$Username)[[i]]
     c <- c + 1
   }
@@ -249,35 +265,47 @@ move2 <- subset(move2, Username!= "Nohelia_acr" &
 
 move2 <- distinct(move2, Datetime, .keep_all = TRUE)
 
+# Restrict Data to Bounding Box of U.S.
 move2 <- subset(move2, longitude > -125 &
                   longitude < -66 &
                   latitude > 24 &
                   latitude < 50)
 
+# Restrict Data to Bounding Box of DFW Area
+move2 <- subset(move2, longitude > -97.5411 &
+                  longitude < -96.3066 &
+                  latitude > 32.3779 &
+                  latitude < 33.3308)
+
+# 4326 - EPSG 4326
+# 3857 - Pseudo Mercator
+projection <- st_crs(4326)
+
 df2 <- df2move(move2, x = "longitude", y = "latitude", 
                time = "Datetime", track_id = "Username",
-               proj = "+init=epsg:4326 +proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0")
+               proj = projection$input)
 
-m2 <- align_move(df2, res = "mean", unit = "days")
+m2 <- align_move(df2, res = "mean")
 
 # view_spatial(m2)
 
-frames2 <- frames_spatial(m2, map_service = "osm", 
-                          map_type = "streets",
+frames2 <- frames_spatial(m2, map_service = "carto", 
+                          map_type = "dark",
                           alhpa = 0.5,
                           path_legend = FALSE,
                           path_size = 0.5,
                           tail_size = 0.5,
-                          trace_size = 0.5) %>% 
+                          trace_size = 0.5,
+                          equidistant = TRUE) %>% 
   add_labels(x = "Longitude", y = "Latitude") %>% 
   add_northarrow() %>% 
   add_scalebar() %>% 
   add_timestamps(type = "label") %>% 
   add_progress()
 
-# tail(frames2, n = 5L)
+# tail(frames2, n = 1L)
 
-animate_frames(frames2, out_file = "move2.mp4", 
+animate_frames(frames2, out_file = "move2_1.mp4", 
                width = 2560, height = 1440, res = 200)
 
 
@@ -289,12 +317,22 @@ move3 <- subset(period3, select = c(Datetime, longitude, latitude, Username))
 move3$longitude <- as.numeric(move3$longitude)
 move3$latitude <- as.numeric(move3$latitude)
 
+userplaces <- read_csv("data/combined_full.csv")
+userplaces <- subset(userplaces, Username != "everytract")
+userplaces <- userplaces %>% 
+  group_by(Username) %>% 
+  summarise(uniqueplaces = n_distinct(Coordinates)) %>% 
+  subset(uniqueplaces < 2)
+for (i in seq_along(userplaces)) {
+  move3 <- subset(move3, Username != userplaces$Username[[i]])
+}
+
 names3 <- vector("list")
 c <- 1
 for (i in seq_along(unique(move3$Username))) {
   if (move3 %>% 
       subset(Username == unique(move3$Username)[[i]]) %>% 
-      nrow < 200) {
+      nrow < 10) {
     names3[[c]] <- unique(move3$Username)[[i]]
     c <- c + 1
   }
@@ -312,35 +350,47 @@ move3 <- subset(move3, Username!= "Nohelia_acr" &
 
 move3 <- distinct(move3, Datetime, .keep_all = TRUE)
 
+# Restrict Data to Bounding Box of U.S.
 move3 <- subset(move3, longitude > -125 &
                   longitude < -66 &
                   latitude > 24 &
                   latitude < 50)
 
+# Restrict Data to Bounding Box of DFW Area
+move3 <- subset(move3, longitude > -97.5411 &
+                  longitude < -96.3066 &
+                  latitude > 32.3779 &
+                  latitude < 33.3308)
+
+# 4326 - EPSG 4326
+# 3857 - Pseudo Mercator
+projection <- st_crs(4326)
+
 df3 <- df2move(move3, x = "longitude", y = "latitude", 
                time = "Datetime", track_id = "Username",
-               proj = "+init=epsg:4326 +proj=longlat +ellps=WGS84 +datum=WGS84 +no_defs +towgs84=0,0,0")
+               proj = projection$input)
 
 m3 <- align_move(df3, res = "mean")
 
 # view_spatial(m3)
 
-frames3 <- frames_spatial(m3, map_service = "osm", 
-                          map_type = "streets",
+frames3 <- frames_spatial(m3, map_service = "carto", 
+                          map_type = "dark",
                           alhpa = 0.5,
                           path_legend = FALSE,
                           path_size = 0.5,
                           tail_size = 0.5,
-                          trace_size = 0.5) %>% 
+                          trace_size = 0.5,
+                          equidistant = TRUE) %>% 
   add_labels(x = "Longitude", y = "Latitude") %>% 
   add_northarrow() %>% 
   add_scalebar() %>% 
   add_timestamps(type = "label") %>% 
   add_progress()
 
-# tail(frames3, n = 5L)
+# tail(frames3, n = 1L)
 
-animate_frames(frames3, out_file = "move3.mp4", 
+animate_frames(frames3, out_file = "move3_1.mp4", 
                width = 2560, height = 1440, res = 200)
 
 
