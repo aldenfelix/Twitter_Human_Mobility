@@ -55,8 +55,8 @@ saveRDS(fulltweets, "data/fulltweets.rds")
 
 
 # Split Data Into 3 Periods ----
-# period 1: 03/01/2018 - 10/31/2018; 
-# period 2: 09/01/2019 - 05/31/2020; 
+# period 1: 03/01/2018 - 10/31/2018 
+# period 2: 09/01/2019 - 05/31/2020 
 # period 3: 10/01/2021 - 06/31/2022
 
 fulltweets <- readRDS("data/fulltweets.rds")
@@ -65,7 +65,7 @@ period1 <- subset(fulltweets, Datetime < "2018-11-01")
 period2 <- subset(fulltweets, Datetime > "2019-08-31" & 
                     Datetime < "2020-06-01")
 period3 <- subset(fulltweets, Datetime > "2021-09-30" & 
-                    Datetime < "2022-07-01")
+                    Datetime < "2022-07-01")n
 
 
 
@@ -204,13 +204,14 @@ m1 <- align_move(df1, res = "mean")
 # Create frames
 frames1 <- frames_spatial(m1, map_service = "carto", 
                          map_type = "dark",
-                         alhpa = 0.5,
+                         alhpa = 1,
                          path_legend = FALSE,
                          path_size = 0.5,
                          tail_size = 0.5,
                          trace_size = 0.5,
                          equidistant = TRUE) %>% 
-  add_labels(x = "Longitude", y = "Latitude") %>% 
+  add_labels(title = "Local Movement in Period 1", 
+             x = "Longitude", y = "Latitude") %>% 
   add_northarrow() %>% 
   add_scalebar() %>% 
   add_timestamps(type = "label") %>% 
@@ -220,7 +221,7 @@ frames1 <- frames_spatial(m1, map_service = "carto",
 # head(frames1, n = 1L)
 # tail(frames1, n = 1L)
 
-animate_frames(frames1, out_file = "move1_1.mp4", 
+animate_frames(frames1, out_file = "Period1_Local.mp4", 
                width = 2560, height = 1440, res = 200)
 
 
@@ -291,13 +292,14 @@ m2 <- align_move(df2, res = "mean")
 
 frames2 <- frames_spatial(m2, map_service = "carto", 
                           map_type = "dark",
-                          alhpa = 0.5,
+                          alhpa = 1,
                           path_legend = FALSE,
                           path_size = 0.5,
                           tail_size = 0.5,
                           trace_size = 0.5,
                           equidistant = TRUE) %>% 
-  add_labels(x = "Longitude", y = "Latitude") %>% 
+  add_labels(title = "Local Movement in Period 2", 
+             x = "Longitude", y = "Latitude") %>% 
   add_northarrow() %>% 
   add_scalebar() %>% 
   add_timestamps(type = "label") %>% 
@@ -305,7 +307,7 @@ frames2 <- frames_spatial(m2, map_service = "carto",
 
 # tail(frames2, n = 1L)
 
-animate_frames(frames2, out_file = "move2_1.mp4", 
+animate_frames(frames2, out_file = "Period2_Local.mp4", 
                width = 2560, height = 1440, res = 200)
 
 
@@ -376,13 +378,14 @@ m3 <- align_move(df3, res = "mean")
 
 frames3 <- frames_spatial(m3, map_service = "carto", 
                           map_type = "dark",
-                          alhpa = 0.5,
+                          alhpa = 1,
                           path_legend = FALSE,
                           path_size = 0.5,
                           tail_size = 0.5,
                           trace_size = 0.5,
                           equidistant = TRUE) %>% 
-  add_labels(x = "Longitude", y = "Latitude") %>% 
+  add_labels(title = "Local Movement in Period 3", 
+             x = "Longitude", y = "Latitude") %>% 
   add_northarrow() %>% 
   add_scalebar() %>% 
   add_timestamps(type = "label") %>% 
@@ -390,7 +393,7 @@ frames3 <- frames_spatial(m3, map_service = "carto",
 
 # tail(frames3, n = 1L)
 
-animate_frames(frames3, out_file = "move3_1.mp4", 
+animate_frames(frames3, out_file = "Period3_Local.mp4", 
                width = 2560, height = 1440, res = 200)
 
 
