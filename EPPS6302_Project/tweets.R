@@ -65,7 +65,7 @@ period1 <- subset(fulltweets, Datetime < "2018-11-01")
 period2 <- subset(fulltweets, Datetime > "2019-08-31" & 
                     Datetime < "2020-06-01")
 period3 <- subset(fulltweets, Datetime > "2021-09-30" & 
-                    Datetime < "2022-07-01")n
+                    Datetime < "2022-07-01")
 
 
 
