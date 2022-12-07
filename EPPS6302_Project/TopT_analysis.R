@@ -5,8 +5,8 @@ toptraveler_data<- read.csv(file ='/Users/zeyusun/Downloads/toptravelers.csv')
 tweet_data<- read.csv(file ='/Users/zeyusun/Downloads/paper_data/combined_full.csv')
 
 
-toptraveler_data_most_travel<- subset(toptraveler_data, toptraveler_data$uniqueplaces >120)
-least_traveler<- subset(toptraveler_data, toptraveler_data$uniqueplaces <5 & toptraveler_data$uniqueplaces>1)
+toptraveler_data_most_travel<- subset(toptraveler_data, toptraveler_data$uniqueplaces >92)
+least_traveler<- subset(toptraveler_data, toptraveler_data$uniqueplaces <6 & toptraveler_data$uniqueplaces>1)
 
 tweets_topT<- tweet_data[tweet_data$Username %in% toptraveler_data_most_travel$Username,]
 tweets_topT$date<- strptime(tweets_topT$Datetime, "%Y-%m-%d")
